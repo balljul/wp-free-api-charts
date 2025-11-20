@@ -80,41 +80,55 @@ jQuery(document).ready(function($) {
     function loadComparisonData($canvas, settings) {
         var loadingId = 'loading-' + $canvas.attr('id');
         
-        var requests = [
-            $.ajax({
-                url: entsoeAjax.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'entsoe_fetch_data',
-                    nonce: entsoeAjax.nonce,
-                    data_type: settings.dataset1.data_type,
-                    start_date: settings.start_date,
-                    end_date: settings.end_date,
-                    area_code: settings.dataset1.area_code
-                }
-            }),
-            $.ajax({
-                url: entsoeAjax.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'entsoe_fetch_data',
-                    nonce: entsoeAjax.nonce,
-                    data_type: settings.dataset2.data_type,
-                    start_date: settings.start_date,
-                    end_date: settings.end_date,
-                    area_code: settings.dataset2.area_code
-                }
-            })
-        ];
+        if (!settings.datasets || settings.datasets.length === 0) {
+            $('#' + loadingId).hide();
+            showError($canvas, 'No datasets configured');
+            return;
+        }
         
-        $.when.apply($, requests).done(function(response1, response2) {
+        var requests = [];
+        
+        // Create AJAX requests for each dataset
+        for (var i = 0; i < settings.datasets.length; i++) {
+            var dataset = settings.datasets[i];
+            requests.push($.ajax({
+                url: entsoeAjax.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'entsoe_fetch_data',
+                    nonce: entsoeAjax.nonce,
+                    data_type: dataset.data_type,
+                    start_date: settings.start_date,
+                    end_date: settings.end_date,
+                    area_code: dataset.area_code
+                }
+            }));
+        }
+        
+        $.when.apply($, requests).done(function() {
             $('#' + loadingId).hide();
             
-            if (response1[0].success && response2[0].success) {
-                renderComparisonChart($canvas[0], response1[0].data, response2[0].data, settings);
+            var responses = arguments.length === 1 ? [arguments] : Array.prototype.slice.call(arguments);
+            var dataResponses = [];
+            var hasError = false;
+            var errorMessage = '';
+            
+            // Process all responses
+            for (var i = 0; i < responses.length; i++) {
+                var response = responses[i][0]; // Get response object
+                if (response.success) {
+                    dataResponses.push(response.data);
+                } else {
+                    hasError = true;
+                    errorMessage = response.error;
+                    break;
+                }
+            }
+            
+            if (hasError) {
+                showError($canvas, errorMessage);
             } else {
-                var error = !response1[0].success ? response1[0].error : response2[0].error;
-                showError($canvas, error);
+                renderMultiComparisonChart($canvas[0], dataResponses, settings);
             }
         }).fail(function(xhr, status, error) {
             $('#' + loadingId).hide();
@@ -328,6 +342,105 @@ jQuery(document).ready(function($) {
                         spanGaps: true
                     }
                 ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: settings.show_legend,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        grid: {
+                            display: settings.show_grid
+                        }
+                    },
+                    y: {
+                        display: true,
+                        grid: {
+                            display: settings.show_grid
+                        }
+                    }
+                }
+            }
+        };
+        
+        new Chart(canvas, config);
+    }
+    
+    function renderMultiComparisonChart(canvas, dataArray, settings) {
+        // Generate default colors for datasets
+        var defaultColors = [
+            '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+            '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16',
+            '#6366f1', '#f43f5e', '#a3e635', '#fb923c', '#c084fc'
+        ];
+        
+        // Merge and synchronize labels from all datasets
+        var allLabels = [];
+        var timeMap = {};
+        
+        // Collect all unique timestamps
+        for (var i = 0; i < dataArray.length; i++) {
+            var data = dataArray[i];
+            if (data.labels) {
+                for (var j = 0; j < data.labels.length; j++) {
+                    timeMap[data.labels[j]] = true;
+                }
+            }
+        }
+        
+        // Sort all unique timestamps
+        allLabels = Object.keys(timeMap).sort();
+        
+        // Create datasets for Chart.js
+        var datasets = [];
+        
+        for (var i = 0; i < dataArray.length; i++) {
+            var data = dataArray[i];
+            var datasetConfig = settings.datasets[i];
+            var mergedData = [];
+            
+            // Create data array with null values for missing timestamps
+            for (var j = 0; j < allLabels.length; j++) {
+                var timestamp = allLabels[j];
+                var value = null;
+                
+                if (data.labels && data.values) {
+                    var index = data.labels.indexOf(timestamp);
+                    if (index !== -1) {
+                        value = data.values[index];
+                    }
+                }
+                mergedData.push(value);
+            }
+            
+            var color = datasetConfig.color || defaultColors[i % defaultColors.length];
+            
+            datasets.push({
+                label: datasetConfig.label + ' (' + (data.unit || '') + ')',
+                data: mergedData,
+                borderColor: color,
+                backgroundColor: color + '33',
+                tension: 0.4,
+                fill: false,
+                spanGaps: true
+            });
+        }
+        
+        var config = {
+            type: settings.chart_type,
+            data: {
+                labels: allLabels,
+                datasets: datasets
             },
             options: {
                 responsive: true,

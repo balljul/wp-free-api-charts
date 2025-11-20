@@ -103,7 +103,7 @@ class ENTSOE_API {
         }
         
         $body = wp_remote_retrieve_body($response);
-        $parsed_data = $this->parse_xml_response($body, $data_type);
+        $parsed_data = $this->parse_xml_response($body, $data_type, $start_date, $end_date);
         
         if ($parsed_data) {
             // Cache the result
@@ -170,7 +170,7 @@ class ENTSOE_API {
     /**
      * Parse XML response from ENTSOE API
      */
-    private function parse_xml_response($xml_string, $data_type) {
+    private function parse_xml_response($xml_string, $data_type, $start_date, $end_date) {
         libxml_use_internal_errors(true);
         $xml = simplexml_load_string($xml_string);
         
@@ -181,17 +181,20 @@ class ENTSOE_API {
         $namespaces = $xml->getNamespaces(true);
         $data = array();
         
+        // Check if this is a single day request
+        $is_single_day = $this->is_single_day($start_date, $end_date);
+        
         switch ($data_type) {
             case 'day_ahead_prices':
             case 'intraday_prices':
-                $data = $this->parse_price_data($xml, $namespaces);
+                $data = $this->parse_price_data($xml, $namespaces, $is_single_day);
                 break;
             case 'actual_load':
             case 'forecasted_load':
-                $data = $this->parse_load_data($xml, $namespaces);
+                $data = $this->parse_load_data($xml, $namespaces, $is_single_day);
                 break;
             case 'generation_per_type':
-                $data = $this->parse_generation_data($xml, $namespaces);
+                $data = $this->parse_generation_data($xml, $namespaces, $is_single_day);
                 break;
         }
         
@@ -199,9 +202,26 @@ class ENTSOE_API {
     }
     
     /**
+     * Check if date range is a single day
+     */
+    private function is_single_day($start_date, $end_date) {
+        $start = new DateTime($start_date, new DateTimeZone('UTC'));
+        $end = new DateTime($end_date, new DateTimeZone('UTC'));
+        
+        // Calculate the difference in hours
+        $interval = $start->diff($end);
+        $total_hours = ($interval->days * 24) + $interval->h;
+        
+        // Consider it single day if it's 24 hours or less
+        // This covers cases like "today 00:00 to tomorrow 00:00" (exactly 24 hours)
+        // and "today 14:00 to tomorrow 14:00" (24 hours starting mid-day)
+        return $total_hours <= 24;
+    }
+    
+    /**
      * Parse price data
      */
-    private function parse_price_data($xml, $namespaces) {
+    private function parse_price_data($xml, $namespaces, $is_single_day = false) {
         $data = array(
             'labels' => array(),
             'values' => array(),
@@ -218,7 +238,7 @@ class ENTSOE_API {
                     $price = (float)$point->{'price.amount'};
                     
                     // Calculate timestamp
-                    $timestamp = $this->calculate_timestamp($start, $resolution, $position);
+                    $timestamp = $this->calculate_timestamp($start, $resolution, $position, $is_single_day);
                     
                     $data['labels'][] = $timestamp;
                     $data['values'][] = $price;
@@ -232,7 +252,7 @@ class ENTSOE_API {
     /**
      * Parse load data
      */
-    private function parse_load_data($xml, $namespaces) {
+    private function parse_load_data($xml, $namespaces, $is_single_day = false) {
         $data = array(
             'labels' => array(),
             'values' => array(),
@@ -248,7 +268,7 @@ class ENTSOE_API {
                     $position = (int)$point->position;
                     $quantity = (float)$point->quantity;
                     
-                    $timestamp = $this->calculate_timestamp($start, $resolution, $position);
+                    $timestamp = $this->calculate_timestamp($start, $resolution, $position, $is_single_day);
                     
                     $data['labels'][] = $timestamp;
                     $data['values'][] = $quantity;
@@ -262,7 +282,7 @@ class ENTSOE_API {
     /**
      * Parse generation data
      */
-    private function parse_generation_data($xml, $namespaces) {
+    private function parse_generation_data($xml, $namespaces, $is_single_day = false) {
         $data = array();
         
         foreach ($xml->TimeSeries as $timeSeries) {
@@ -284,7 +304,7 @@ class ENTSOE_API {
                     $position = (int)$point->position;
                     $quantity = (float)$point->quantity;
                     
-                    $timestamp = $this->calculate_timestamp($start, $resolution, $position);
+                    $timestamp = $this->calculate_timestamp($start, $resolution, $position, $is_single_day);
                     
                     $data[$generation_type]['labels'][] = $timestamp;
                     $data[$generation_type]['values'][] = $quantity;
@@ -299,7 +319,7 @@ class ENTSOE_API {
     /**
      * Calculate timestamp from position
      */
-    private function calculate_timestamp($start, $resolution, $position) {
+    private function calculate_timestamp($start, $resolution, $position, $is_single_day = false) {
         $dt = new DateTime($start, new DateTimeZone('UTC'));
         
         // Parse resolution (e.g., PT15M, PT60M)
@@ -309,7 +329,12 @@ class ENTSOE_API {
         // Add minutes for position
         $dt->modify('+' . (($position - 1) * $minutes) . ' minutes');
         
-        return $dt->format('Y-m-d H:i');
+        // Format based on whether it's single day or multi-day data
+        if ($is_single_day) {
+            return $dt->format('H:i');  // Show only time for single day
+        } else {
+            return $dt->format('Y-m-d H:i');  // Show date and time for multi-day
+        }
     }
     
     /**

@@ -24,17 +24,19 @@ class ENTSOE_Comparison_Chart_Widget extends \Elementor\Widget_Base {
     
     protected function register_controls() {
         
-        // Dataset 1
+        // Datasets Section
         $this->start_controls_section(
-            'dataset1_section',
+            'datasets_section',
             [
-                'label' => 'Dataset 1',
+                'label' => 'Datasets',
                 'tab' => \Elementor\Controls_Manager::TAB_CONTENT,
             ]
         );
         
-        $this->add_control(
-            'dataset1_type',
+        $repeater = new \Elementor\Repeater();
+        
+        $repeater->add_control(
+            'data_type',
             [
                 'label' => 'Data Type',
                 'type' => \Elementor\Controls_Manager::SELECT,
@@ -48,8 +50,8 @@ class ENTSOE_Comparison_Chart_Widget extends \Elementor\Widget_Base {
             ]
         );
         
-        $this->add_control(
-            'dataset1_area',
+        $repeater->add_control(
+            'area_code',
             [
                 'label' => 'Area/Country',
                 'type' => \Elementor\Controls_Manager::SELECT,
@@ -58,17 +60,17 @@ class ENTSOE_Comparison_Chart_Widget extends \Elementor\Widget_Base {
             ]
         );
         
-        $this->add_control(
-            'dataset1_label',
+        $repeater->add_control(
+            'label',
             [
                 'label' => 'Label',
                 'type' => \Elementor\Controls_Manager::TEXT,
-                'default' => 'Dataset 1',
+                'default' => 'Dataset',
             ]
         );
         
-        $this->add_control(
-            'dataset1_color',
+        $repeater->add_control(
+            'color',
             [
                 'label' => 'Color',
                 'type' => \Elementor\Controls_Manager::COLOR,
@@ -76,57 +78,27 @@ class ENTSOE_Comparison_Chart_Widget extends \Elementor\Widget_Base {
             ]
         );
         
-        $this->end_controls_section();
-        
-        // Dataset 2
-        $this->start_controls_section(
-            'dataset2_section',
-            [
-                'label' => 'Dataset 2',
-                'tab' => \Elementor\Controls_Manager::TAB_CONTENT,
-            ]
-        );
-        
         $this->add_control(
-            'dataset2_type',
+            'datasets',
             [
-                'label' => 'Data Type',
-                'type' => \Elementor\Controls_Manager::SELECT,
-                'default' => 'day_ahead_prices',
-                'options' => [
-                    'day_ahead_prices' => 'Day-Ahead Prices',
-                    'intraday_prices' => 'Intraday Prices',
-                    'actual_load' => 'Actual Load',
-                    'forecasted_load' => 'Forecasted Load',
+                'label' => 'Datasets',
+                'type' => \Elementor\Controls_Manager::REPEATER,
+                'fields' => $repeater->get_controls(),
+                'default' => [
+                    [
+                        'data_type' => 'day_ahead_prices',
+                        'area_code' => get_option('entsoe_default_area', '10YAT-APG------L'),
+                        'label' => 'Dataset 1',
+                        'color' => '#3b82f6',
+                    ],
+                    [
+                        'data_type' => 'day_ahead_prices',
+                        'area_code' => '10YDE-VE-------2',
+                        'label' => 'Dataset 2',
+                        'color' => '#10b981',
+                    ],
                 ],
-            ]
-        );
-        
-        $this->add_control(
-            'dataset2_area',
-            [
-                'label' => 'Area/Country',
-                'type' => \Elementor\Controls_Manager::SELECT,
-                'default' => '10YDE-VE-------2',
-                'options' => $this->get_area_options(),
-            ]
-        );
-        
-        $this->add_control(
-            'dataset2_label',
-            [
-                'label' => 'Label',
-                'type' => \Elementor\Controls_Manager::TEXT,
-                'default' => 'Dataset 2',
-            ]
-        );
-        
-        $this->add_control(
-            'dataset2_color',
-            [
-                'label' => 'Color',
-                'type' => \Elementor\Controls_Manager::COLOR,
-                'default' => '#10b981',
+                'title_field' => '{{{ label }}}',
             ]
         );
         
@@ -270,18 +242,7 @@ class ENTSOE_Comparison_Chart_Widget extends \Elementor\Widget_Base {
                 style="height: <?php echo $settings['chart_height']['size']; ?>px;"
                 data-comparison="true"
                 data-widget-settings="<?php echo esc_attr(json_encode([
-                    'dataset1' => [
-                        'data_type' => $settings['dataset1_type'],
-                        'area_code' => $settings['dataset1_area'],
-                        'label' => $settings['dataset1_label'],
-                        'color' => $settings['dataset1_color'],
-                    ],
-                    'dataset2' => [
-                        'data_type' => $settings['dataset2_type'],
-                        'area_code' => $settings['dataset2_area'],
-                        'label' => $settings['dataset2_label'],
-                        'color' => $settings['dataset2_color'],
-                    ],
+                    'datasets' => $settings['datasets'] ?: [],
                     'start_date' => $start_date,
                     'end_date' => $end_date,
                     'chart_type' => $settings['chart_type'],
