@@ -254,26 +254,78 @@ jQuery(document).ready(function($) {
     }
     
     function renderComparisonChart(canvas, data1, data2, settings) {
+        // Merge and synchronize labels from both datasets
+        var allLabels = [];
+        var mergedData1 = [];
+        var mergedData2 = [];
+        
+        // Create a map of all unique timestamps
+        var timeMap = {};
+        
+        // Add all timestamps from dataset1
+        if (data1.labels && data1.values) {
+            for (var i = 0; i < data1.labels.length; i++) {
+                timeMap[data1.labels[i]] = true;
+            }
+        }
+        
+        // Add all timestamps from dataset2
+        if (data2.labels && data2.values) {
+            for (var i = 0; i < data2.labels.length; i++) {
+                timeMap[data2.labels[i]] = true;
+            }
+        }
+        
+        // Sort all unique timestamps
+        allLabels = Object.keys(timeMap).sort();
+        
+        // Create data arrays with null values for missing timestamps
+        for (var i = 0; i < allLabels.length; i++) {
+            var timestamp = allLabels[i];
+            
+            // Find value in dataset1
+            var value1 = null;
+            if (data1.labels && data1.values) {
+                var index1 = data1.labels.indexOf(timestamp);
+                if (index1 !== -1) {
+                    value1 = data1.values[index1];
+                }
+            }
+            mergedData1.push(value1);
+            
+            // Find value in dataset2
+            var value2 = null;
+            if (data2.labels && data2.values) {
+                var index2 = data2.labels.indexOf(timestamp);
+                if (index2 !== -1) {
+                    value2 = data2.values[index2];
+                }
+            }
+            mergedData2.push(value2);
+        }
+        
         var config = {
             type: settings.chart_type,
             data: {
-                labels: data1.labels,
+                labels: allLabels,
                 datasets: [
                     {
-                        label: settings.dataset1.label + ' (' + data1.unit + ')',
-                        data: data1.values,
+                        label: settings.dataset1.label + ' (' + (data1.unit || '') + ')',
+                        data: mergedData1,
                         borderColor: settings.dataset1.color,
                         backgroundColor: settings.dataset1.color + '33',
                         tension: 0.4,
-                        fill: false
+                        fill: false,
+                        spanGaps: true
                     },
                     {
-                        label: settings.dataset2.label + ' (' + data2.unit + ')',
-                        data: data2.values,
+                        label: settings.dataset2.label + ' (' + (data2.unit || '') + ')',
+                        data: mergedData2,
                         borderColor: settings.dataset2.color,
                         backgroundColor: settings.dataset2.color + '33',
                         tension: 0.4,
-                        fill: false
+                        fill: false,
+                        spanGaps: true
                     }
                 ]
             },
