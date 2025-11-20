@@ -24,21 +24,19 @@ class ENTSOE_Comparison_Chart_Widget extends \Elementor\Widget_Base {
     
     protected function register_controls() {
         
-        // Datasets Section
+        // Data Settings Section
         $this->start_controls_section(
-            'datasets_section',
+            'data_section',
             [
-                'label' => 'Datasets',
+                'label' => 'Data Settings',
                 'tab' => \Elementor\Controls_Manager::TAB_CONTENT,
             ]
         );
         
-        $repeater = new \Elementor\Repeater();
-        
-        $repeater->add_control(
+        $this->add_control(
             'data_type',
             [
-                'label' => 'Data Type',
+                'label' => 'Metric Type',
                 'type' => \Elementor\Controls_Manager::SELECT,
                 'default' => 'day_ahead_prices',
                 'options' => [
@@ -50,69 +48,6 @@ class ENTSOE_Comparison_Chart_Widget extends \Elementor\Widget_Base {
             ]
         );
         
-        $repeater->add_control(
-            'area_code',
-            [
-                'label' => 'Area/Country',
-                'type' => \Elementor\Controls_Manager::SELECT,
-                'default' => get_option('entsoe_default_area', '10YAT-APG------L'),
-                'options' => $this->get_area_options(),
-            ]
-        );
-        
-        $repeater->add_control(
-            'label',
-            [
-                'label' => 'Label',
-                'type' => \Elementor\Controls_Manager::TEXT,
-                'default' => 'Dataset',
-            ]
-        );
-        
-        $repeater->add_control(
-            'color',
-            [
-                'label' => 'Color',
-                'type' => \Elementor\Controls_Manager::COLOR,
-                'default' => '#3b82f6',
-            ]
-        );
-        
-        $this->add_control(
-            'datasets',
-            [
-                'label' => 'Datasets',
-                'type' => \Elementor\Controls_Manager::REPEATER,
-                'fields' => $repeater->get_controls(),
-                'default' => [
-                    [
-                        'data_type' => 'day_ahead_prices',
-                        'area_code' => get_option('entsoe_default_area', '10YAT-APG------L'),
-                        'label' => 'Dataset 1',
-                        'color' => '#3b82f6',
-                    ],
-                    [
-                        'data_type' => 'day_ahead_prices',
-                        'area_code' => '10YDE-VE-------2',
-                        'label' => 'Dataset 2',
-                        'color' => '#10b981',
-                    ],
-                ],
-                'title_field' => '{{{ label }}}',
-            ]
-        );
-        
-        $this->end_controls_section();
-        
-        // Chart Settings
-        $this->start_controls_section(
-            'chart_section',
-            [
-                'label' => 'Chart Settings',
-                'tab' => \Elementor\Controls_Manager::TAB_CONTENT,
-            ]
-        );
-        
         $this->add_control(
             'date_range',
             [
@@ -121,6 +56,7 @@ class ENTSOE_Comparison_Chart_Widget extends \Elementor\Widget_Base {
                 'default' => 'today',
                 'options' => [
                     'today' => 'Today',
+                    'tomorrow' => 'Tomorrow',
                     'yesterday' => 'Yesterday',
                     'last_7_days' => 'Last 7 Days',
                     'last_30_days' => 'Last 30 Days',
@@ -148,6 +84,81 @@ class ENTSOE_Comparison_Chart_Widget extends \Elementor\Widget_Base {
                 'condition' => [
                     'date_range' => 'custom',
                 ],
+            ]
+        );
+        
+        $this->end_controls_section();
+        
+        // Datasets Section
+        $this->start_controls_section(
+            'datasets_section',
+            [
+                'label' => 'Areas/Countries to Compare',
+                'tab' => \Elementor\Controls_Manager::TAB_CONTENT,
+            ]
+        );
+        
+        $repeater = new \Elementor\Repeater();
+        
+        $repeater->add_control(
+            'area_code',
+            [
+                'label' => 'Area/Country',
+                'type' => \Elementor\Controls_Manager::SELECT,
+                'default' => get_option('entsoe_default_area', '10YAT-APG------L'),
+                'options' => $this->get_area_options(),
+            ]
+        );
+        
+        $repeater->add_control(
+            'label',
+            [
+                'label' => 'Display Label',
+                'type' => \Elementor\Controls_Manager::TEXT,
+                'default' => 'Area',
+                'placeholder' => 'e.g., Austria, Germany, etc.',
+            ]
+        );
+        
+        $repeater->add_control(
+            'color',
+            [
+                'label' => 'Line Color',
+                'type' => \Elementor\Controls_Manager::COLOR,
+                'default' => '#3b82f6',
+            ]
+        );
+        
+        $this->add_control(
+            'datasets',
+            [
+                'label' => 'Areas to Compare',
+                'type' => \Elementor\Controls_Manager::REPEATER,
+                'fields' => $repeater->get_controls(),
+                'default' => [
+                    [
+                        'area_code' => get_option('entsoe_default_area', '10YAT-APG------L'),
+                        'label' => 'Austria',
+                        'color' => '#3b82f6',
+                    ],
+                    [
+                        'area_code' => '10YDE-VE-------2',
+                        'label' => 'Germany',
+                        'color' => '#10b981',
+                    ],
+                ],
+                'title_field' => '{{{ label }}} ({{{ area_code }}})',
+            ]
+        );
+        
+        $this->end_controls_section();
+        
+        // Chart Settings
+        $this->start_controls_section(
+            'chart_section',
+            [
+                'label' => 'Chart Settings',
+                'tab' => \Elementor\Controls_Manager::TAB_CONTENT,
             ]
         );
         
@@ -242,6 +253,7 @@ class ENTSOE_Comparison_Chart_Widget extends \Elementor\Widget_Base {
                 style="height: <?php echo $settings['chart_height']['size']; ?>px;"
                 data-comparison="true"
                 data-widget-settings="<?php echo esc_attr(json_encode([
+                    'data_type' => $settings['data_type'],
                     'datasets' => $settings['datasets'] ?: [],
                     'start_date' => $start_date,
                     'end_date' => $end_date,
@@ -261,6 +273,10 @@ class ENTSOE_Comparison_Chart_Widget extends \Elementor\Widget_Base {
             case 'today':
                 $start = new DateTime('today', $timezone);
                 $end = new DateTime('tomorrow', $timezone);
+                break;
+            case 'tomorrow':
+                $start = new DateTime('tomorrow', $timezone);
+                $end = new DateTime('+2 days', $timezone);
                 break;
             case 'yesterday':
                 $start = new DateTime('yesterday', $timezone);

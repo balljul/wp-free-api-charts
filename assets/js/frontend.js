@@ -97,7 +97,7 @@ jQuery(document).ready(function($) {
                 data: {
                     action: 'entsoe_fetch_data',
                     nonce: entsoeAjax.nonce,
-                    data_type: dataset.data_type,
+                    data_type: settings.data_type,
                     start_date: settings.start_date,
                     end_date: settings.end_date,
                     area_code: dataset.area_code
