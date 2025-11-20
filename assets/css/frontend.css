@@ -1,0 +1,107 @@
+.entsoe-chart-wrapper {
+    position: relative;
+    width: 100%;
+    margin: 20px 0;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.entsoe-chart-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 20px 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.entsoe-chart-loading span {
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.entsoe-chart-loading span::before {
+    content: '';
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.entsoe-chart-wrapper canvas {
+    width: 100% !important;
+    height: auto !important;
+}
+
+.entsoe-chart-error {
+    padding: 20px;
+    background: #fee;
+    border: 1px solid #fcc;
+    border-radius: 8px;
+    color: #c33;
+    text-align: center;
+}
+
+.entsoe-chart-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #1a202c;
+}
+
+.entsoe-chart-subtitle {
+    font-size: 14px;
+    color: #718096;
+    margin-bottom: 20px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .entsoe-chart-wrapper {
+        padding: 15px;
+    }
+    
+    .entsoe-chart-title {
+        font-size: 18px;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .entsoe-chart-wrapper {
+        background: #1a202c;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    
+    .entsoe-chart-title {
+        color: #f7fafc;
+    }
+    
+    .entsoe-chart-subtitle {
+        color: #a0aec0;
+    }
+    
+    .entsoe-chart-loading {
+        background: rgba(26, 32, 44, 0.95);
+    }
+    
+    .entsoe-chart-loading span {
+        color: #f7fafc;
+    }
+}
