@@ -92,6 +92,7 @@ jQuery(document).ready(function($) {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
+                backgroundColor: '#ffffff',
                 plugins: {
                     legend: {
                         display: true,
@@ -157,6 +158,7 @@ jQuery(document).ready(function($) {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
+                backgroundColor: '#ffffff',
                 plugins: {
                     legend: {
                         display: true,

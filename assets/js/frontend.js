@@ -199,6 +199,7 @@ jQuery(document).ready(function($) {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                backgroundColor: settings.chart_background_color || '#ffffff',
                 plugins: {
                     legend: {
                         display: settings.show_legend
@@ -277,6 +278,7 @@ jQuery(document).ready(function($) {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                backgroundColor: settings.chart_background_color || '#ffffff',
                 plugins: {
                     legend: {
                         display: settings.show_legend,
@@ -352,6 +354,7 @@ jQuery(document).ready(function($) {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                backgroundColor: settings.chart_background_color || '#ffffff',
                 plugins: {
                     legend: {
                         display: settings.show_legend,
@@ -454,6 +457,7 @@ jQuery(document).ready(function($) {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                backgroundColor: settings.chart_background_color || '#ffffff',
                 plugins: {
                     legend: {
                         display: settings.show_legend,
@@ -565,6 +569,7 @@ jQuery(document).ready(function($) {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                backgroundColor: settings.chart_background_color || '#ffffff',
                 plugins: {
                     legend: {
                         display: settings.show_legend,

@@ -192,6 +192,16 @@ class ENTSOE_Generation_Chart_Widget extends \Elementor\Widget_Base {
             ]
         );
         
+        $this->add_control(
+            'chart_background_color',
+            [
+                'label' => 'Chart Background Color',
+                'type' => \Elementor\Controls_Manager::COLOR,
+                'default' => '#ffffff',
+                'description' => 'Sets the background color of the chart area',
+            ]
+        );
+        
         $this->end_controls_section();
     }
     
@@ -259,6 +269,7 @@ class ENTSOE_Generation_Chart_Widget extends \Elementor\Widget_Base {
                     'start_date' => $start_date,
                     'end_date' => $end_date,
                     'chart_type' => $settings['chart_type'],
+                    'chart_background_color' => $settings['chart_background_color'],
                     'show_grid' => $settings['show_grid'] === 'yes',
                     'show_legend' => $settings['show_legend'] === 'yes',
                 ])); ?>">

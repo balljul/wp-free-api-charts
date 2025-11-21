@@ -156,6 +156,16 @@ class ENTSOE_Load_Chart_Widget extends \Elementor\Widget_Base {
         );
         
         $this->add_control(
+            'chart_background_color',
+            [
+                'label' => 'Chart Background Color',
+                'type' => \Elementor\Controls_Manager::COLOR,
+                'default' => '#ffffff',
+                'description' => 'Sets the background color of the chart area',
+            ]
+        );
+        
+        $this->add_control(
             'show_grid',
             [
                 'label' => 'Show Grid',
@@ -208,6 +218,7 @@ class ENTSOE_Load_Chart_Widget extends \Elementor\Widget_Base {
                     'chart_type' => $settings['chart_type'],
                     'line_color' => $settings['line_color'],
                     'background_color' => $settings['background_color'],
+                    'chart_background_color' => $settings['chart_background_color'],
                     'show_grid' => $settings['show_grid'] === 'yes',
                     'show_legend' => $settings['show_legend'] === 'yes',
                 ])); ?>">
