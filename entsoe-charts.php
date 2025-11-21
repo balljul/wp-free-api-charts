@@ -1,10 +1,10 @@
 <?php
 /**
- * Plugin Name: ENTSOE Energy Charts
- * Plugin URI: https://yoursite.com
- * Description: Display ENTSOE electricity market data with beautiful charts and Elementor integration
- * Version: 1.0.0
- * Author: Julius
+ * Plugin Name: ENTSO-E Energy Charts Pro
+ * Plugin URI: https://github.com/your-repo/entsoe-charts
+ * Description: Professional energy market analysis with interactive charts. Compare electricity prices, consumption & generation across European countries. Includes preconfigured templates and real-time ENTSO-E data integration.
+ * Version: 2.0.0
+ * Author: Energy Analytics Team
  * Author URI: https://yoursite.com
  * License: GPL v2 or later
  * Text Domain: entsoe-charts
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('ENTSOE_CHARTS_VERSION', '1.0.0');
+define('ENTSOE_CHARTS_VERSION', '2.0.0');
 define('ENTSOE_CHARTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('ENTSOE_CHARTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -85,6 +85,7 @@ class ENTSOE_Charts_Plugin {
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('entsoe-ajax-nonce')
         ));
+        
     }
     
     public function ajax_fetch_data() {
@@ -94,6 +95,16 @@ class ENTSOE_Charts_Plugin {
         $start_date = isset($_POST['start_date']) ? sanitize_text_field($_POST['start_date']) : '';
         $end_date = isset($_POST['end_date']) ? sanitize_text_field($_POST['end_date']) : '';
         $area_code = isset($_POST['area_code']) ? sanitize_text_field($_POST['area_code']) : '';
+        
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('ENTSO-E AJAX Request: ' . json_encode(array(
+                'data_type' => $data_type,
+                'start_date' => $start_date,
+                'end_date' => $end_date,
+                'area_code' => $area_code
+            )));
+        }
         
         $api = new ENTSOE_API();
         $result = $api->fetch_data($data_type, $start_date, $end_date, $area_code);

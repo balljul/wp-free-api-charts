@@ -24,12 +24,57 @@ class ENTSOE_Comparison_Chart_Widget extends \Elementor\Widget_Base {
     
     protected function register_controls() {
         
+        // Preset Templates Section
+        $this->start_controls_section(
+            'preset_section',
+            [
+                'label' => 'Chart Presets',
+                'tab' => \Elementor\Controls_Manager::TAB_CONTENT,
+            ]
+        );
+        
+        $this->add_control(
+            'chart_preset',
+            [
+                'label' => 'Preset Configuration',
+                'type' => \Elementor\Controls_Manager::SELECT,
+                'default' => 'custom',
+                'options' => [
+                    'custom' => 'Custom Configuration',
+                    'weekly_consumption' => '📊 Weekly Power Consumption (DE + AT)',
+                    'daily_prices' => '💰 Daily Price Comparison (DE + AT)',
+                    'load_forecast' => '🔮 Germany Actual Load (Today)',
+                ],
+                'description' => 'Select a preset or use custom configuration',
+            ]
+        );
+        
+        $this->add_control(
+            'preset_note',
+            [
+                'type' => \Elementor\Controls_Manager::RAW_HTML,
+                'raw' => '<div style="background: #e8f4fd; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                    <strong>Preset 1:</strong> Weekly power consumption (Germany vs Austria)<br>
+                    <strong>Preset 2:</strong> Daily electricity prices (Germany vs Austria)<br>
+                    <strong>Preset 3:</strong> Germany actual power load for today
+                </div>',
+                'condition' => [
+                    'chart_preset!' => 'custom',
+                ],
+            ]
+        );
+        
+        $this->end_controls_section();
+        
         // Data Settings Section
         $this->start_controls_section(
             'data_section',
             [
                 'label' => 'Data Settings',
                 'tab' => \Elementor\Controls_Manager::TAB_CONTENT,
+                'condition' => [
+                    'chart_preset' => 'custom',
+                ],
             ]
         );
         
@@ -95,6 +140,9 @@ class ENTSOE_Comparison_Chart_Widget extends \Elementor\Widget_Base {
             [
                 'label' => 'Areas/Countries to Compare',
                 'tab' => \Elementor\Controls_Manager::TAB_CONTENT,
+                'condition' => [
+                    'chart_preset' => 'custom',
+                ],
             ]
         );
         
@@ -238,8 +286,84 @@ class ENTSOE_Comparison_Chart_Widget extends \Elementor\Widget_Base {
         return $api->get_area_codes();
     }
     
+    private function apply_preset($settings) {
+        switch ($settings['chart_preset']) {
+            case 'weekly_consumption':
+                return array_merge($settings, [
+                    'data_type' => 'actual_load',
+                    'date_range' => 'yesterday',  // Changed to yesterday for more reliable data
+                    'chart_type' => 'line',
+                    'show_grid' => 'yes',
+                    'show_legend' => 'yes',
+                    'datasets' => [
+                        [
+                            'area_code' => '10YDE-VE-------2', // Germany
+                            'label' => 'Germany',
+                            'color' => '#ef4444',
+                        ],
+                        [
+                            'area_code' => '10YAT-APG------L', // Austria  
+                            'label' => 'Austria',
+                            'color' => '#10b981',
+                        ],
+                    ]
+                ]);
+                
+            case 'daily_prices':
+                return array_merge($settings, [
+                    'data_type' => 'day_ahead_prices',
+                    'date_range' => 'today',
+                    'chart_type' => 'line',
+                    'show_grid' => 'yes',
+                    'show_legend' => 'yes',
+                    'datasets' => [
+                        [
+                            'area_code' => '10YDE-VE-------2', // Germany
+                            'label' => 'Germany',
+                            'color' => '#ef4444',
+                        ],
+                        [
+                            'area_code' => '10YFR-RTE------C', // France
+                            'label' => 'France',
+                            'color' => '#3b82f6',
+                        ],
+                        [
+                            'area_code' => '10YAT-APG------L', // Austria
+                            'label' => 'Austria',
+                            'color' => '#10b981',
+                        ],
+                    ]
+                ]);
+                
+            case 'load_forecast':
+                return array_merge($settings, [
+                    'data_type' => 'actual_load',
+                    'date_range' => 'today',
+                    'chart_type' => 'line',
+                    'show_grid' => 'yes',
+                    'show_legend' => 'yes',
+                    'datasets' => [
+                        [
+                            'area_code' => '10YDE-VE-------2', // Germany
+                            'label' => 'Germany - Actual Load',
+                            'color' => '#ef4444',
+                        ],
+                    ]
+                ]);
+                
+            default:
+                return $settings;
+        }
+    }
+    
     protected function render() {
         $settings = $this->get_settings_for_display();
+        
+        // Apply preset configurations
+        if ($settings['chart_preset'] !== 'custom') {
+            $settings = $this->apply_preset($settings);
+        }
+        
         list($start_date, $end_date) = $this->calculate_dates($settings);
         $widget_id = 'entsoe-comparison-' . $this->get_id();
         

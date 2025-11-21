@@ -88,7 +88,14 @@ class ENTSOE_API {
         }
         
         // Make API request
-        $response = wp_remote_get($this->api_url . '?' . http_build_query($params), array(
+        $url = $this->api_url . '?' . http_build_query($params);
+        
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('ENTSO-E API Request: ' . $url);
+        }
+        
+        $response = wp_remote_get($url, array(
             'timeout' => 30,
             'headers' => array(
                 'Content-Type' => 'application/xml'

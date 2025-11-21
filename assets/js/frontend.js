@@ -4,9 +4,18 @@ jQuery(document).ready(function($) {
     initializeCharts();
     
     // Also initialize charts after Elementor preview updates
-    if (window.elementorFrontend) {
+    if (window.elementorFrontend && window.elementorFrontend.hooks) {
         window.elementorFrontend.hooks.addAction('frontend/element_ready/widget', function($scope) {
             initializeChartsInScope($scope);
+        });
+    } else {
+        // Fallback: wait for Elementor to load
+        $(window).on('elementor/frontend/init', function() {
+            if (window.elementorFrontend && window.elementorFrontend.hooks) {
+                window.elementorFrontend.hooks.addAction('frontend/element_ready/widget', function($scope) {
+                    initializeChartsInScope($scope);
+                });
+            }
         });
     }
     
@@ -80,47 +89,74 @@ jQuery(document).ready(function($) {
     function loadComparisonData($canvas, settings) {
         var loadingId = 'loading-' + $canvas.attr('id');
         
+        console.log('Loading comparison data with settings:', settings);
+        
         if (!settings.datasets || settings.datasets.length === 0) {
             $('#' + loadingId).hide();
             showError($canvas, 'No datasets configured');
+            console.error('No datasets configured for chart');
             return;
         }
         
-        var requests = [];
+        console.log('Number of datasets:', settings.datasets.length);
         
         // Create AJAX requests for each dataset
+        var requests = [];
         for (var i = 0; i < settings.datasets.length; i++) {
             var dataset = settings.datasets[i];
-            requests.push($.ajax({
-                url: entsoeAjax.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'entsoe_fetch_data',
-                    nonce: entsoeAjax.nonce,
-                    data_type: settings.data_type,
-                    start_date: settings.start_date,
-                    end_date: settings.end_date,
-                    area_code: dataset.area_code
-                }
-            }));
+            
+            console.log('Creating AJAX request', i, 'for area:', dataset.area_code);
+            
+            requests.push(
+                $.ajax({
+                    url: entsoeAjax.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'entsoe_fetch_data',
+                        nonce: entsoeAjax.nonce,
+                        data_type: settings.data_type,
+                        start_date: settings.start_date,
+                        end_date: settings.end_date,
+                        area_code: dataset.area_code
+                    }
+                })
+            );
         }
         
         $.when.apply($, requests).done(function() {
             $('#' + loadingId).hide();
             
-            var responses = arguments.length === 1 ? [arguments] : Array.prototype.slice.call(arguments);
+            var responses = arguments;
             var dataResponses = [];
             var hasError = false;
             var errorMessage = '';
             
+            // Handle single vs multiple responses
+            if (requests.length === 1) {
+                responses = [responses];
+            }
+            
             // Process all responses
             for (var i = 0; i < responses.length; i++) {
-                var response = responses[i][0]; // Get response object
+                var response = responses[i][0]; // jQuery AJAX returns [data, status, xhr]
+                console.log('Response', i, ':', response);
+                
+                if (response.data) {
+                    console.log('Response data details:', {
+                        labels_count: response.data.labels ? response.data.labels.length : 0,
+                        values_count: response.data.values ? response.data.values.length : 0,
+                        unit: response.data.unit,
+                        sample_labels: response.data.labels ? response.data.labels.slice(0, 5) : [],
+                        sample_values: response.data.values ? response.data.values.slice(0, 5) : []
+                    });
+                }
+                
                 if (response.success) {
                     dataResponses.push(response.data);
                 } else {
                     hasError = true;
-                    errorMessage = response.error;
+                    errorMessage = response.error || 'Unknown error occurred';
+                    console.error('API error for dataset', i, ':', errorMessage);
                     break;
                 }
             }
@@ -128,10 +164,15 @@ jQuery(document).ready(function($) {
             if (hasError) {
                 showError($canvas, errorMessage);
             } else {
+                console.log('All data loaded successfully, rendering chart...');
+                console.log('Data responses:', dataResponses);
+                console.log('Canvas element:', $canvas[0]);
+                console.log('Chart.js available:', typeof Chart !== 'undefined');
                 renderMultiComparisonChart($canvas[0], dataResponses, settings);
             }
         }).fail(function(xhr, status, error) {
             $('#' + loadingId).hide();
+            console.error('AJAX error:', error);
             showError($canvas, 'Failed to load comparison data: ' + error);
         });
     }
@@ -198,6 +239,11 @@ jQuery(document).ready(function($) {
             '#6366f1', '#f43f5e', '#a3e635', '#fb923c', '#c084fc'
         ];
         
+        if (settings.chart_type === 'pie') {
+            renderPieChart(canvas, data, settings, colors);
+            return;
+        }
+        
         var datasets = [];
         var colorIndex = 0;
         
@@ -258,6 +304,68 @@ jQuery(document).ready(function($) {
                         title: {
                             display: true,
                             text: data.unit || 'MW'
+                        }
+                    }
+                }
+            }
+        };
+        
+        new Chart(canvas, config);
+    }
+    
+    function renderPieChart(canvas, data, settings, colors) {
+        var labels = [];
+        var values = [];
+        var backgroundColors = [];
+        var colorIndex = 0;
+        
+        // Calculate total generation for each source (sum all time periods)
+        for (var genType in data) {
+            if (genType === 'unit') continue;
+            
+            var total = 0;
+            if (data[genType].values) {
+                for (var i = 0; i < data[genType].values.length; i++) {
+                    total += data[genType].values[i] || 0;
+                }
+            }
+            
+            if (total > 0) {
+                labels.push(genType);
+                values.push(total);
+                backgroundColors.push(colors[colorIndex % colors.length]);
+                colorIndex++;
+            }
+        }
+        
+        var config = {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: backgroundColors,
+                    borderColor: '#ffffff',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: settings.show_legend,
+                        position: 'right'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                var label = context.label || '';
+                                var value = context.parsed;
+                                var total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                var percentage = ((value / total) * 100).toFixed(1);
+                                return label + ': ' + value.toFixed(0) + ' MW (' + percentage + '%)';
+                            }
                         }
                     }
                 }
@@ -377,6 +485,18 @@ jQuery(document).ready(function($) {
     }
     
     function renderMultiComparisonChart(canvas, dataArray, settings) {
+        console.log('renderMultiComparisonChart called');
+        console.log('Canvas:', canvas);
+        console.log('Data array:', dataArray);
+        console.log('Settings:', settings);
+        
+        // Check if Chart.js is available
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js library not found!');
+            showError($(canvas), 'Chart.js library not loaded');
+            return;
+        }
+        
         // Generate default colors for datasets
         var defaultColors = [
             '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -472,7 +592,15 @@ jQuery(document).ready(function($) {
             }
         };
         
-        new Chart(canvas, config);
+        console.log('Creating Chart.js with config:', config);
+        
+        try {
+            var chart = new Chart(canvas, config);
+            console.log('Chart created successfully:', chart);
+        } catch (error) {
+            console.error('Error creating chart:', error);
+            showError($(canvas), 'Error creating chart: ' + error.message);
+        }
     }
     
     function showError($canvas, message) {
